@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { PRODUCTS } from '../products/product-data';
 
 @Component({
   selector: 'app-home',
@@ -7,7 +8,5 @@ import { Component } from '@angular/core';
   standalone: false,
 })
 export class HomePage {
-
-  constructor() {}
-
+  readonly products = PRODUCTS;
 }

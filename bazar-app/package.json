@@ -6,9 +6,13 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:api": "node --env-file-if-exists=.env --experimental-strip-types server/index.mjs",
+    "start:dev": "ng serve --proxy-config proxy.conf.json",
+    "start:production": "npm run build && npm run start:api",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test --configuration ci",
+    "test:api": "node --experimental-strip-types --test server/index.test.mjs",
     "lint": "ng lint"
   },
   "private": true,

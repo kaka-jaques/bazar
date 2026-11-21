@@ -1,0 +1,32 @@
+<ion-header>
+  <ion-toolbar>
+    <div class="header-inner">
+      <a class="wordmark" routerLink="/home" aria-label="Bazar, página inicial">bazar<span>.</span></a>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <main class="payment-result">
+    @if (isChecking) {
+      <p class="eyebrow">PAGAMENTO</p>
+      <h1>Verificando seu pagamento...</h1>
+      <p>Estamos confirmando a transação com a InfinitePay.</p>
+    } @else if (verificationFailed) {
+      <p class="eyebrow">NÃO FOI POSSÍVEL CONFIRMAR</p>
+      <h1>Seu pagamento ainda não foi verificado.</h1>
+      <p>Não considere o item reservado até receber a confirmação.</p>
+      <a class="result-link" routerLink="/home">Voltar para a vitrine</a>
+    } @else if (paymentStatus === 'paid') {
+      <p class="eyebrow">PAGAMENTO APROVADO</p>
+      <h1>Obrigado pela sua compra!</h1>
+      <p>O pagamento foi confirmado e o item está reservado para você.</p>
+      <a class="result-link" [routerLink]="['/produto', productSlug]">Ver item</a>
+    } @else {
+      <p class="eyebrow">PAGAMENTO PENDENTE</p>
+      <h1>Ainda não recebemos a confirmação.</h1>
+      <p>O item só será reservado após a aprovação do pagamento.</p>
+      <a class="result-link" [routerLink]="['/produto', productSlug]">Voltar ao item</a>
+    }
+  </main>
+</ion-content>
