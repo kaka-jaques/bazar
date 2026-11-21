@@ -6,7 +6,7 @@ Edite a lista `PRODUCTS` em [`bazar-app/src/app/products/product-data.ts`](bazar
 
 Adicione as imagens em `bazar-app/src/assets/products/`, atualize `image` com a imagem de capa e liste os caminhos na propriedade `images` na ordem desejada para o carrossel. Cada slug deve ser único; ele identifica o endereço da página de detalhes (`/produto/<slug>`).
 
-O catálogo atual usa produtos e ilustrações de exemplo. O checkout integrado com InfinitePay aceita pagamento integral ou sinal de 30%.
+Após editar `product-data.ts`, reinicie `npm run start:api` para o Node carregar os novos produtos, slugs e preços. O frontend em desenvolvimento (`npm run start:dev` ou `ionic serve`) recompila o catálogo; se não atualizar, reinicie esse servidor e recarregue a página. Para atualizar o site estático servido pelo Node em `www`, execute `npm run build` antes de iniciar/reiniciar a API. O catálogo atual usa produtos e ilustrações de exemplo. O checkout integrado com InfinitePay aceita pagamento integral ou sinal de 30%.
 
 ## Status de reserva (Node.js + SQLite)
 
@@ -21,7 +21,15 @@ Requer Node.js 22.13 ou mais recente (`node:sqlite`, suporte a remoção de tipo
 5. Configure `INFINITEPAY_API_KEY` no servidor. Ela é necessária para aplicar as opções de repasse de taxas de parcelamento e pagamento único.
 6. Execute `npm run start:api`.
 
-Ative o Checkout Integrado na conta InfinitePay. O servidor envia o payload para `https://api.checkout.infinitepay.io/links` e redireciona o comprador para o link retornado. O payload usa `assured_installments: 0` para repassar ao comprador as taxas de todas as parcelas, além de limitar o link a um pagamento. Após o retorno do comprador, o servidor confirma o pagamento via `payment_check` antes de marcar o item como reservado. Não há webhook; se o comprador não retornar ao site após pagar, a confirmação não será processada automaticamente. Se a consulta de disponibilidade ou a criação do checkout falhar, o site abre uma conversa no WhatsApp `+55 47 99262-6735` com o nome e código do item. Nunca coloque a API Key no Angular. O sinal de 30% reserva o item após aprovação; o valor restante não é cobrado automaticamente por este fluxo. Para evitar pagamentos duplicados, um pedido pendente reutiliza o link existente; um checkout em andamento impede a criação de outro link para o mesmo item.
+Ative o Checkout Integrado na conta InfinitePay. O servidor envia o payload para `https://api.checkout.infinitepay.io/links` e redireciona o comprador para o link retornado. O payload usa `assured_installments: 0` para repassar ao comprador as taxas de todas as parcelas, além de limitar o link a um pagamento. A InfinitePay exige pagamento mínimo de R$ 1,00; o botão de sinal de 30% fica desativado se o valor calculado for menor, e a API também rejeita valores abaixo do mínimo. Antes de ir ao checkout, o comprador informa um celular brasileiro com DDD. O servidor normaliza e guarda esse número junto ao pedido no SQLite; ele não é enviado à InfinitePay nem fica exposto em endpoints públicos. Após o retorno do comprador, o servidor confirma o pagamento via `payment_check` antes de marcar o item como reservado; a página mostra uma confirmação visual com o item reservado quando recebe aprovação. Não há webhook; se o comprador não retornar ao site após pagar, a confirmação não será processada automaticamente. Se a consulta de disponibilidade ou a criação do checkout falhar, o site abre uma conversa no WhatsApp `+55 47 99262-6735` com o nome e código do item. Nunca coloque a API Key ou `RESERVATION_ADMIN_KEY` no Angular. O sinal de 30% reserva o item após aprovação; o valor restante não é cobrado automaticamente por este fluxo. Para evitar pagamentos duplicados, um pedido pendente reutiliza o link existente; um checkout em andamento impede a criação de outro link para o mesmo item.
+
+Para consultar os contatos de pedidos aprovados, use `GET /api/admin/orders` com `Authorization: Bearer <RESERVATION_ADMIN_KEY>`. A resposta inclui o celular, item, valor, identificador da fatura e um link do WhatsApp com uma mensagem pronta para o comprador; são retornados no máximo os 100 pedidos aprovados mais recentes. Por exemplo, no PowerShell:
+
+```powershell
+curl.exe -H "Authorization: Bearer SUA_CHAVE_ADMIN" https://seu-dominio.com/api/admin/orders
+```
+
+Proteja essa chave e consulte a rota apenas de um ambiente administrativo. A atualização do banco existente adiciona a coluna do telefone automaticamente ao iniciar a API. O link do WhatsApp apenas abre a conversa e preenche o texto; é necessário revisar e enviar manualmente. Não há envio automático nem link direto de recibo; isso exigiria uma integração de WhatsApp Business e suporte de recibo disponibilizado pela InfinitePay.
 
 Consulte a [documentação oficial do Checkout Integrado da InfinitePay](https://www.infinitepay.io/checkout-documentacao) para habilitar a integração e configurar as credenciais na conta.
 

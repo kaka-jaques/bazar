@@ -6,6 +6,14 @@ import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { createReservationServer } from './index.mjs';
 
+const TEST_PRODUCTS = [
+  { slug: 'poltrona-nuvem', name: 'Poltrona Nuvem', price: 1890 },
+  { slug: 'luminaria-petala', name: 'Luminária Pétala', price: 460 },
+  { slug: 'vaso-aurora', name: 'Vaso Aurora', price: 240 },
+  { slug: 'mesa-lateral-noa', name: 'Mesa lateral Noa', price: 690 },
+];
+const TEST_PHONE = '+5547999999999';
+
 describe('reservation API', () => {
   let temporaryDirectory;
   let databasePath;
@@ -40,6 +48,7 @@ describe('reservation API', () => {
       infinitePayApiKey: 'test-api-key',
       infinitePayRedirectUrl: 'https://shop.example/pagamento/retorno',
       fetchImpl: (...args) => fakeProviderFetch(...args),
+      products: TEST_PRODUCTS,
     });
     await new Promise((resolveListen) => {
       application.server.listen(0, '127.0.0.1', resolveListen);
@@ -110,6 +119,43 @@ describe('reservation API', () => {
     assert.deepEqual(columns, ['product_slug', 'reserved']);
   });
 
+  it('adds the customer phone column when opening a database from an older version', async () => {
+    const legacyDatabasePath = join(temporaryDirectory, 'legacy-reservations.sqlite');
+    const legacyDatabase = new DatabaseSync(legacyDatabasePath);
+    legacyDatabase.exec(`
+      CREATE TABLE checkout_orders (
+        order_nsu TEXT PRIMARY KEY,
+        product_slug TEXT NOT NULL,
+        amount INTEGER NOT NULL CHECK (amount > 0),
+        payment_type TEXT NOT NULL CHECK (payment_type IN ('full', 'deposit')),
+        status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'failed')),
+        checkout_url TEXT,
+        transaction_nsu TEXT,
+        invoice_slug TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    legacyDatabase.close();
+
+    const migratedApp = createReservationServer({
+      databasePath: legacyDatabasePath,
+      staticDirectory: join(temporaryDirectory, 'site'),
+      products: TEST_PRODUCTS,
+    });
+    await new Promise((resolveListen) => {
+      migratedApp.server.listen(0, '127.0.0.1', resolveListen);
+    });
+    await migratedApp.close();
+
+    const migratedDatabase = new DatabaseSync(legacyDatabasePath);
+    const columns = migratedDatabase
+      .prepare('PRAGMA table_info(checkout_orders)')
+      .all()
+      .map((column) => column.name);
+    migratedDatabase.close();
+    assert.ok(columns.includes('customer_phone'));
+  });
+
   it('rejects invalid reservation values', async () => {
     const response = await fetch(`${baseUrl}/api/reservations/poltrona-nuvem`, {
       method: 'PUT',
@@ -149,7 +195,7 @@ describe('reservation API', () => {
     const fullResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'poltrona-nuvem', paymentType: 'full' }),
+      body: JSON.stringify({ slug: 'poltrona-nuvem', paymentType: 'full', phone: TEST_PHONE }),
     });
     const fullCheckout = await fullResponse.json();
     assert.equal(fullResponse.status, 201);
@@ -158,7 +204,7 @@ describe('reservation API', () => {
     const depositResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'luminaria-petala', paymentType: 'deposit' }),
+      body: JSON.stringify({ slug: 'luminaria-petala', paymentType: 'deposit', phone: TEST_PHONE }),
     });
     const depositCheckout = await depositResponse.json();
     assert.equal(depositResponse.status, 201);
@@ -197,13 +243,124 @@ describe('reservation API', () => {
       const response = await fetch(`http://127.0.0.1:${address.port}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: 'poltrona-nuvem', paymentType: 'full' }),
+        body: JSON.stringify({ slug: 'poltrona-nuvem', paymentType: 'full', phone: TEST_PHONE }),
       });
 
       assert.equal(response.status, 503);
       assert.match((await response.json()).error, /API key/);
     } finally {
       await appWithoutApiKey.close();
+    }
+  });
+
+  it('requires a valid Brazilian mobile number before creating a checkout', async () => {
+    clearProductState('poltrona-nuvem');
+    let providerCalls = 0;
+    fakeProviderFetch = async () => {
+      providerCalls += 1;
+      return new Response(JSON.stringify({
+        url: 'https://checkout.infinitepay.com.br/phone-test',
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+
+    const response = await fetch(`${baseUrl}/api/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: 'poltrona-nuvem',
+        paymentType: 'full',
+        phone: '(47) 99999-9999',
+      }),
+    });
+
+    assert.equal(response.status, 201);
+    assert.equal(providerCalls, 1);
+    clearProductState('poltrona-nuvem');
+
+    const invalidResponse = await fetch(`${baseUrl}/api/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: 'poltrona-nuvem',
+        paymentType: 'full',
+        phone: '12345',
+      }),
+    });
+
+    assert.equal(invalidResponse.status, 400);
+    assert.match((await invalidResponse.json()).error, /mobile phone/);
+    assert.equal(providerCalls, 1);
+  });
+
+  it('rejects deposits below R$1.00 without calling InfinitePay', async () => {
+    let providerCalls = 0;
+    const appWithMinimumAmountProducts = createReservationServer({
+      databasePath: join(temporaryDirectory, 'minimum-amount.sqlite'),
+      staticDirectory: join(temporaryDirectory, 'site'),
+      infinitePayHandle: 'test-handle',
+      infinitePayApiKey: 'test-api-key',
+      infinitePayRedirectUrl: 'https://shop.example/pagamento/retorno',
+      products: [
+        {
+          slug: 'item-abaixo-do-minimo',
+          name: 'Item abaixo do mínimo',
+          category: 'Teste',
+          price: 3.3,
+          summary: '',
+          description: '',
+          image: '',
+          images: [],
+          condition: '',
+          material: '',
+          dimensions: '',
+          stock: 1,
+        },
+        {
+          slug: 'item-no-minimo',
+          name: 'Item no mínimo',
+          category: 'Teste',
+          price: 3.34,
+          summary: '',
+          description: '',
+          image: '',
+          images: [],
+          condition: '',
+          material: '',
+          dimensions: '',
+          stock: 1,
+        },
+      ],
+      fetchImpl: async () => {
+        providerCalls += 1;
+        return new Response(JSON.stringify({
+          url: 'https://checkout.infinitepay.io/minimum-test',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      },
+    });
+    await new Promise((resolveListen) => {
+      appWithMinimumAmountProducts.server.listen(0, '127.0.0.1', resolveListen);
+    });
+
+    try {
+      const address = appWithMinimumAmountProducts.server.address();
+      assert.ok(address && typeof address !== 'string');
+      const requestDeposit = (slug) => fetch(`http://127.0.0.1:${address.port}/api/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, paymentType: 'deposit', phone: TEST_PHONE }),
+      });
+
+      const belowMinimumResponse = await requestDeposit('item-abaixo-do-minimo');
+      assert.equal(belowMinimumResponse.status, 400);
+      assert.match((await belowMinimumResponse.json()).error, /at least 100 cents/);
+      assert.equal(providerCalls, 0);
+
+      const minimumResponse = await requestDeposit('item-no-minimo');
+      assert.equal(minimumResponse.status, 201);
+      assert.equal((await minimumResponse.json()).amount, 100);
+      assert.equal(providerCalls, 1);
+    } finally {
+      await appWithMinimumAmountProducts.close();
     }
   });
 
@@ -216,7 +373,7 @@ describe('reservation API', () => {
     const acceptedResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'full' }),
+      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'full', phone: TEST_PHONE }),
     });
     assert.equal(acceptedResponse.status, 201);
 
@@ -228,7 +385,7 @@ describe('reservation API', () => {
     const rejectedResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'mesa-lateral-noa', paymentType: 'full' }),
+      body: JSON.stringify({ slug: 'mesa-lateral-noa', paymentType: 'full', phone: TEST_PHONE }),
     });
     assert.equal(rejectedResponse.status, 502);
   });
@@ -256,7 +413,7 @@ describe('reservation API', () => {
     const checkoutResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'deposit' }),
+      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'deposit', phone: TEST_PHONE }),
     });
     const checkout = await checkoutResponse.json();
     assert.equal(checkoutResponse.status, 201);
@@ -276,6 +433,23 @@ describe('reservation API', () => {
       productSlug: 'vaso-aurora',
     });
 
+    const unauthorizedOrdersResponse = await fetch(`${baseUrl}/api/admin/orders`);
+    assert.equal(unauthorizedOrdersResponse.status, 401);
+
+    const ordersResponse = await fetch(`${baseUrl}/api/admin/orders`, {
+      headers: { Authorization: 'Bearer test-reservation-key' },
+    });
+    assert.equal(ordersResponse.status, 200);
+    const { orders } = await ordersResponse.json();
+    assert.equal(orders.length, 1);
+    assert.equal(orders[0].customerPhone, TEST_PHONE);
+    assert.equal(orders[0].productName, 'Vaso Aurora');
+    assert.equal(orders[0].invoiceSlug, 'invoice-123');
+    const whatsappUrl = new URL(orders[0].whatsappUrl);
+    assert.equal(whatsappUrl.host, 'wa.me');
+    assert.equal(whatsappUrl.pathname, '/5547999999999');
+    assert.match(whatsappUrl.searchParams.get('text'), /Vaso Aurora/);
+
     const reservationResponse = await fetch(`${baseUrl}/api/reservations/vaso-aurora`);
     assert.deepEqual(await reservationResponse.json(), {
       slug: 'vaso-aurora',
@@ -293,22 +467,24 @@ describe('reservation API', () => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     };
 
-    const requestCheckout = (paymentType) => fetch(`${baseUrl}/api/checkout`, {
+    const requestCheckout = (paymentType, phone = TEST_PHONE) => fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'mesa-lateral-noa', paymentType }),
+      body: JSON.stringify({ slug: 'mesa-lateral-noa', paymentType, phone }),
     });
     const firstResponse = await requestCheckout('full');
     const firstCheckout = await firstResponse.json();
     const repeatResponse = await requestCheckout('full');
     const repeatCheckout = await repeatResponse.json();
     const alternateResponse = await requestCheckout('deposit');
+    const otherContactResponse = await requestCheckout('full', '+5547998888777');
 
     assert.equal(firstResponse.status, 201);
     assert.equal(repeatResponse.status, 200);
     assert.equal(firstCheckout.orderNsu, repeatCheckout.orderNsu);
     assert.equal(firstCheckout.checkoutUrl, repeatCheckout.checkoutUrl);
     assert.equal(alternateResponse.status, 409);
+    assert.equal(otherContactResponse.status, 409);
     assert.equal(linkRequests, 1);
   });
 
@@ -323,7 +499,7 @@ describe('reservation API', () => {
     const checkoutResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'full' }),
+      body: JSON.stringify({ slug: 'vaso-aurora', paymentType: 'full', phone: TEST_PHONE }),
     });
     const checkout = await checkoutResponse.json();
     assert.equal(checkoutResponse.status, 201);
@@ -357,7 +533,7 @@ describe('reservation API', () => {
     const checkoutResponse = await fetch(`${baseUrl}/api/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'luminaria-petala', paymentType: 'full' }),
+      body: JSON.stringify({ slug: 'luminaria-petala', paymentType: 'full', phone: TEST_PHONE }),
     });
     const checkout = await checkoutResponse.json();
     assert.equal(checkoutResponse.status, 201);

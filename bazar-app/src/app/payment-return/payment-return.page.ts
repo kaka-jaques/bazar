@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { PaymentService } from '../payments/payment.service';
+import { PRODUCTS } from '../products/product-data';
 
 @Component({
   selector: 'app-payment-return',
@@ -11,6 +12,7 @@ import { PaymentService } from '../payments/payment.service';
 export class PaymentReturnPage {
   private readonly route = inject(ActivatedRoute);
   private readonly paymentService = inject(PaymentService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   isChecking = true;
   paymentStatus: 'pending' | 'paid' | null = null;
@@ -34,11 +36,17 @@ export class PaymentReturnPage {
         this.paymentStatus = result.status;
         this.productSlug = result.productSlug;
         this.isChecking = false;
+        this.changeDetector.markForCheck();
       },
       error: () => {
         this.isChecking = false;
         this.verificationFailed = true;
+        this.changeDetector.markForCheck();
       },
     });
+  }
+
+  get productName(): string {
+    return PRODUCTS.find((product) => product.slug === this.productSlug)?.name ?? 'seu item';
   }
 }

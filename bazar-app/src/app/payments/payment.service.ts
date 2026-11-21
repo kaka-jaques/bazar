@@ -19,8 +19,8 @@ export interface PaymentConfirmation {
 export class PaymentService {
   private readonly http = inject(HttpClient);
 
-  createCheckout(slug: string, paymentType: PaymentType): Observable<CheckoutLink> {
-    return this.http.post<CheckoutLink>('/api/checkout', { slug, paymentType });
+  createCheckout(slug: string, paymentType: PaymentType, phone: string): Observable<CheckoutLink> {
+    return this.http.post<CheckoutLink>('/api/checkout', { slug, paymentType, phone });
   }
 
   confirmPayment(

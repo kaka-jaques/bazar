@@ -26,6 +26,20 @@
     </section>
 
     <section id="produtos" class="catalog" aria-labelledby="catalog-title">
+      <div class="category-filters" role="group" aria-label="Filtrar produtos por categoria">
+        @for (category of categories; track category) {
+          <button
+            type="button"
+            class="category-filter"
+            [class.selected]="selectedCategory === category"
+            [attr.aria-pressed]="selectedCategory === category"
+            (click)="selectCategory(category)"
+          >
+            {{ category }}
+          </button>
+        }
+      </div>
+
       <div class="section-heading">
         <div>
           <p class="eyebrow">ESCOLHIDOS A DEDO</p>

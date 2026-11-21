@@ -27,6 +27,7 @@ export class ProductDetailPage {
   reservationLoadFailed = false;
   checkoutInProgress: PaymentType | null = null;
   checkoutErrorMessage: string | null = null;
+  buyerPhone = '';
 
   constructor() {
     const slug = this.route.snapshot.paramMap.get('slug');
@@ -66,15 +67,31 @@ export class ProductDetailPage {
     }
   }
 
+  onBuyerPhoneInput(event: Event): void {
+    if (event.target instanceof HTMLInputElement) {
+      this.buyerPhone = event.target.value;
+    }
+  }
+
   startCheckout(paymentType: PaymentType): void {
     const product = this.product;
-    if (!product || this.isReserved !== false || this.checkoutInProgress) {
+    const phone = this.normalizedBuyerPhone;
+    if (!product || this.isReserved !== false || this.checkoutInProgress || !phone) {
+      return;
+    }
+
+    if (
+      (paymentType === 'full' && !this.canMakeFullPayment) ||
+      (paymentType === 'deposit' && !this.canMakeDeposit)
+    ) {
+      this.checkoutErrorMessage = 'A InfinitePay aceita pagamentos a partir de R$ 1,00.';
+      this.changeDetector.markForCheck();
       return;
     }
 
     this.checkoutInProgress = paymentType;
     this.checkoutErrorMessage = null;
-    this.paymentService.createCheckout(product.slug, paymentType).subscribe({
+    this.paymentService.createCheckout(product.slug, paymentType, phone).subscribe({
       next: (checkout) => window.location.assign(checkout.checkoutUrl),
       error: (error: unknown) => {
         this.checkoutInProgress = null;
@@ -91,7 +108,34 @@ export class ProductDetailPage {
     });
   }
 
+  get fullAmountInCents(): number {
+    return this.product ? Math.round(this.product.price * 100) : 0;
+  }
+
+  get depositAmountInCents(): number {
+    return Math.round(this.fullAmountInCents * 0.3);
+  }
+
+  get canMakeFullPayment(): boolean {
+    return this.fullAmountInCents >= 100;
+  }
+
+  get canMakeDeposit(): boolean {
+    return this.depositAmountInCents >= 100;
+  }
+
   get depositAmount(): number {
-    return this.product ? Math.round(this.product.price * 30) / 100 : 0;
+    return this.depositAmountInCents / 100;
+  }
+
+  get normalizedBuyerPhone(): string | null {
+    const digits = this.buyerPhone.replace(/\D/g, '');
+    const nationalNumber = digits.length === 13 && digits.startsWith('55')
+      ? digits.slice(2)
+      : digits;
+
+    return /^[1-9]\d9\d{8}$/.test(nationalNumber)
+      ? `+55${nationalNumber}`
+      : null;
   }
 }

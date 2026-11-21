@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { PRODUCTS } from '../products/product-data';
+import { PRODUCTS, Product } from '../products/product-data';
 
 @Component({
   selector: 'app-home',
@@ -8,5 +8,16 @@ import { PRODUCTS } from '../products/product-data';
   standalone: false,
 })
 export class HomePage {
-  readonly products = PRODUCTS;
+  readonly categories = ['Todos', ...new Set(PRODUCTS.map((product) => product.category))];
+  selectedCategory = 'Todos';
+
+  get products(): Product[] {
+    return this.selectedCategory === 'Todos'
+      ? PRODUCTS
+      : PRODUCTS.filter((product) => product.category === this.selectedCategory);
+  }
+
+  selectCategory(category: string): void {
+    this.selectedCategory = category;
+  }
 }

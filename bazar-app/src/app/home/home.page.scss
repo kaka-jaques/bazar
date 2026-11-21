@@ -77,6 +77,38 @@ h1 {
   scroll-margin-top: 24px;
 }
 
+.category-filters {
+  margin-bottom: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.category-filter {
+  min-height: 38px;
+  padding: 8px 17px;
+  border: 1px solid #d8d1c7;
+  border-radius: 999px;
+  color: var(--store-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.category-filter:hover,
+.category-filter.selected {
+  border-color: var(--store-ink);
+  color: var(--store-paper);
+  background: var(--store-ink);
+}
+
+.category-filter:focus-visible {
+  outline: 2px solid var(--store-accent);
+  outline-offset: 3px;
+}
+
 .section-heading {
   margin-bottom: 24px;
   display: flex;

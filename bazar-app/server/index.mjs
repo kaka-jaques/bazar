@@ -71,6 +71,21 @@ function validCallbackField(value) {
   return typeof value === 'string' && value.length > 0 && value.length <= 255;
 }
 
+function normalizeBrazilianMobile(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const digits = value.replace(/\D/g, '');
+  const nationalNumber = digits.length === 13 && digits.startsWith('55')
+    ? digits.slice(2)
+    : digits;
+
+  return /^[1-9]\d9\d{8}$/.test(nationalNumber)
+    ? `+55${nationalNumber}`
+    : null;
+}
+
 function isInfinitePayCheckoutUrl(value) {
   if (typeof value !== 'string') {
     return false;
@@ -163,6 +178,7 @@ export function createReservationServer({
     CREATE TABLE IF NOT EXISTS checkout_orders (
       order_nsu TEXT PRIMARY KEY,
       product_slug TEXT NOT NULL,
+      customer_phone TEXT,
       amount INTEGER NOT NULL CHECK (amount > 0),
       payment_type TEXT NOT NULL CHECK (payment_type IN ('full', 'deposit')),
       status TEXT NOT NULL CHECK (status IN ('pending', 'paid', 'failed')),
@@ -172,6 +188,12 @@ export function createReservationServer({
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  const checkoutOrderColumns = database
+    .prepare('PRAGMA table_info(checkout_orders)')
+    .all();
+  if (!checkoutOrderColumns.some((column) => column.name === 'customer_phone')) {
+    database.exec('ALTER TABLE checkout_orders ADD COLUMN customer_phone TEXT');
+  }
   database.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS one_pending_checkout_per_product
     ON checkout_orders(product_slug)
@@ -194,19 +216,33 @@ export function createReservationServer({
     WHERE order_nsu = ?
   `);
   const findPendingOrder = database.prepare(`
-    SELECT order_nsu, amount, payment_type, status, checkout_url
+    SELECT order_nsu, amount, payment_type, status, checkout_url, customer_phone
     FROM checkout_orders
     WHERE product_slug = ? AND status = 'pending'
   `);
   const createOrder = database.prepare(`
-    INSERT INTO checkout_orders (order_nsu, product_slug, amount, payment_type, status)
-    VALUES (?, ?, ?, ?, 'pending')
+    INSERT INTO checkout_orders
+      (order_nsu, product_slug, customer_phone, amount, payment_type, status)
+    VALUES (?, ?, ?, ?, ?, 'pending')
+  `);
+  const savePendingPhone = database.prepare(`
+    UPDATE checkout_orders
+    SET customer_phone = ?
+    WHERE order_nsu = ? AND status = 'pending' AND customer_phone IS NULL
+  `);
+  const listPaidOrders = database.prepare(`
+    SELECT order_nsu, product_slug, customer_phone, amount, payment_type,
+      transaction_nsu, invoice_slug, created_at
+    FROM checkout_orders
+    WHERE status = 'paid' AND customer_phone IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 100
   `);
   const saveCheckoutUrl = database.prepare(
     'UPDATE checkout_orders SET checkout_url = ? WHERE order_nsu = ?'
   );
   const setOrderFailed = database.prepare(
-    "UPDATE checkout_orders SET status = 'failed' WHERE order_nsu = ? AND status = 'pending'"
+    "UPDATE checkout_orders SET status = 'failed', customer_phone = NULL WHERE order_nsu = ? AND status = 'pending'"
   );
   const setOrderPaid = database.prepare(`
     UPDATE checkout_orders
@@ -214,7 +250,7 @@ export function createReservationServer({
     WHERE order_nsu = ? AND status = 'pending'
   `);
 
-  async function createCheckoutLink(productSlug, paymentType) {
+  async function createCheckoutLink(productSlug, paymentType, customerPhone) {
     if (!infinitePayHandle || !infinitePayRedirectUrl || !infinitePayApiKey) {
       return {
         statusCode: 503,
@@ -236,6 +272,12 @@ export function createReservationServer({
     if (!Number.isSafeInteger(amount) || amount <= 0) {
       return { statusCode: 400, body: { error: 'Product price is invalid' } };
     }
+    if (amount < 100) {
+      return {
+        statusCode: 400,
+        body: { error: 'InfinitePay checkout payments must be at least 100 cents' },
+      };
+    }
 
     const pendingOrder = findPendingOrder.get(productSlug);
     if (pendingOrder) {
@@ -244,6 +286,15 @@ export function createReservationServer({
           statusCode: 409,
           body: { error: 'A checkout for this product is already in progress' },
         };
+      }
+      if (pendingOrder.customer_phone && pendingOrder.customer_phone !== customerPhone) {
+        return {
+          statusCode: 409,
+          body: { error: 'A checkout for this product is already associated with a different contact' },
+        };
+      }
+      if (!pendingOrder.customer_phone) {
+        savePendingPhone.run(customerPhone, pendingOrder.order_nsu);
       }
 
       return {
@@ -257,7 +308,7 @@ export function createReservationServer({
     }
 
     const orderNsu = randomUUID();
-    createOrder.run(orderNsu, productSlug, amount, paymentType);
+    createOrder.run(orderNsu, productSlug, customerPhone, amount, paymentType);
     const checkoutRequest = {
       handle: infinitePayHandle,
       order_nsu: orderNsu,
@@ -395,18 +446,22 @@ export function createReservationServer({
         }
 
         const body = await readJsonBody(request);
+        const customerPhone = isRecord(body) ? normalizeBrazilianMobile(body.phone) : null;
         if (
           !isRecord(body) ||
           typeof body.slug !== 'string' ||
           !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.slug) ||
-          !['full', 'deposit'].includes(body.paymentType)
+          !['full', 'deposit'].includes(body.paymentType) ||
+          !customerPhone
         ) {
-          sendJson(response, 400, { error: 'A product slug and valid payment type are required' });
+          sendJson(response, 400, {
+            error: 'A product slug, valid payment type, and Brazilian mobile phone are required',
+          });
           return;
         }
 
         try {
-          const result = await createCheckoutLink(body.slug, body.paymentType);
+          const result = await createCheckoutLink(body.slug, body.paymentType, customerPhone);
           sendJson(response, result.statusCode, result.body);
         } catch (error) {
           console.error('InfinitePay checkout creation failed:', error);
@@ -444,6 +499,45 @@ export function createReservationServer({
           console.error('InfinitePay payment verification failed:', error);
           sendJson(response, 502, { error: 'Could not verify the payment with InfinitePay' });
         }
+        return;
+      }
+
+      if (url.pathname === '/api/admin/orders') {
+        if (request.method !== 'GET') {
+          response.setHeader('Allow', 'GET');
+          sendJson(response, 405, { error: 'Method not allowed' });
+          return;
+        }
+
+        if (!adminKey) {
+          sendJson(response, 503, { error: 'Order access is not configured on this server' });
+          return;
+        }
+        if (!isAuthorized(request, adminKey)) {
+          sendJson(response, 401, { error: 'Unauthorized' });
+          return;
+        }
+
+        const orders = listPaidOrders.all().map((order) => {
+          const productName = products.find((product) => product.slug === order.product_slug)?.name
+            ?? order.product_slug;
+          const phoneDigits = order.customer_phone.replace(/\D/g, '');
+          const message = `Olá! Confirmamos seu pagamento pelo item ${productName}. Obrigado pela compra!`;
+
+          return {
+            orderNsu: order.order_nsu,
+            productSlug: order.product_slug,
+            productName,
+            customerPhone: order.customer_phone,
+            amount: order.amount,
+            paymentType: order.payment_type,
+            transactionNsu: order.transaction_nsu,
+            invoiceSlug: order.invoice_slug,
+            createdAt: order.created_at,
+            whatsappUrl: `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`,
+          };
+        });
+        sendJson(response, 200, { orders });
         return;
       }
 

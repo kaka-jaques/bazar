@@ -7,7 +7,7 @@
 </ion-header>
 
 <ion-content>
-  <main class="payment-result">
+  <main class="payment-result" aria-live="polite" [attr.aria-busy]="isChecking">
     @if (isChecking) {
       <p class="eyebrow">PAGAMENTO</p>
       <h1>Verificando seu pagamento...</h1>
@@ -18,10 +18,11 @@
       <p>Não considere o item reservado até receber a confirmação.</p>
       <a class="result-link" routerLink="/home">Voltar para a vitrine</a>
     } @else if (paymentStatus === 'paid') {
+      <span class="success-icon" aria-hidden="true">✓</span>
       <p class="eyebrow">PAGAMENTO APROVADO</p>
-      <h1>Obrigado pela sua compra!</h1>
-      <p>O pagamento foi confirmado e o item está reservado para você.</p>
-      <a class="result-link" [routerLink]="['/produto', productSlug]">Ver item</a>
+      <h1>Pagamento confirmado!</h1>
+      <p>O pagamento foi confirmado pela InfinitePay, e <strong>{{ productName }}</strong> está reservado para você.</p>
+      <a class="result-link" [routerLink]="['/produto', productSlug]">Ver item reservado</a>
     } @else {
       <p class="eyebrow">PAGAMENTO PENDENTE</p>
       <h1>Ainda não recebemos a confirmação.</h1>

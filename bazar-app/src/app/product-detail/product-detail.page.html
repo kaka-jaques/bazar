@@ -81,10 +81,28 @@
             }
           </div>
           <div class="checkout-actions">
+            <label class="phone-field" for="buyer-phone">
+              Seu WhatsApp com DDD
+              <input
+                id="buyer-phone"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="(47) 99999-9999"
+                [value]="buyerPhone"
+                (input)="onBuyerPhoneInput($event)"
+                [attr.aria-invalid]="buyerPhone && !normalizedBuyerPhone"
+                aria-describedby="buyer-phone-note"
+              />
+            </label>
+            <p id="buyer-phone-note" class="checkout-note">
+              O número será associado ao pedido e ficará acessível à loja para contato sobre a compra.
+              Informe um celular brasileiro com DDD para liberar o checkout.
+            </p>
             <button
               type="button"
               class="checkout-button primary"
-              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null"
+              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null || !canMakeFullPayment || !normalizedBuyerPhone"
               (click)="startCheckout('full')"
             >
               @if (checkoutInProgress === 'full') {
@@ -96,7 +114,7 @@
             <button
               type="button"
               class="checkout-button secondary"
-              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null"
+              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null || !canMakeDeposit || !normalizedBuyerPhone"
               (click)="startCheckout('deposit')"
             >
               @if (checkoutInProgress === 'deposit') {
@@ -105,6 +123,11 @@
                 Reservar com sinal de {{ depositAmount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} (30%)
               }
             </button>
+            @if (!canMakeDeposit) {
+              <p class="checkout-note" role="status">
+                O sinal de 30% fica abaixo do mínimo de R$ 1,00 aceito pela InfinitePay.
+              </p>
+            }
             @if (checkoutErrorMessage) {
               <p class="checkout-error" role="alert">
                 {{ checkoutErrorMessage }}

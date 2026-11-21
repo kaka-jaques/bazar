@@ -58,6 +58,23 @@ p:not(.eyebrow) {
   text-decoration: none;
 }
 
+.success-icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #376f39;
+  background: #e6efe2;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.payment-result strong {
+  color: var(--store-ink);
+}
+
 @media (max-width: 700px) {
   .header-inner {
     width: calc(100% - 36px);
