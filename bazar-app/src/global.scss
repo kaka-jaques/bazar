@@ -112,6 +112,70 @@ ion-content.detail-content {
   font-size: 11px;
 }
 
+.notice-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgb(25 25 22 / 58%);
+}
+
+.purchase-notice {
+  width: min(520px, 100%);
+  max-height: 100%;
+  padding: 36px;
+  overflow-y: auto;
+  background: var(--store-paper);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 20%);
+}
+
+.purchase-notice .eyebrow {
+  margin-bottom: 10px;
+}
+
+.purchase-notice h2 {
+  margin-bottom: 20px;
+}
+
+.notice-copy {
+  color: var(--store-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.notice-copy p:last-child {
+  margin-bottom: 24px;
+}
+
+.notice-copy a {
+  color: var(--store-accent);
+  text-underline-offset: 3px;
+}
+
+.notice-dismiss {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  color: var(--store-paper);
+  background: var(--store-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.notice-dismiss:hover {
+  background: var(--store-accent);
+}
+
+.notice-dismiss:focus-visible,
+.notice-copy a:focus-visible {
+  outline: 2px solid var(--store-accent);
+  outline-offset: 3px;
+}
+
 @media (max-width: 600px) {
   .header-inner,
   .site-footer {
@@ -121,6 +185,14 @@ ion-content.detail-content {
 
   .wordmark {
     font-size: 24px;
+  }
+
+  .notice-overlay {
+    padding: 18px;
+  }
+
+  .purchase-notice {
+    padding: 28px 22px;
   }
 
   .site-header nav {

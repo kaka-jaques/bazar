@@ -10,6 +10,7 @@ import { PRODUCTS, Product } from '../products/product-data';
 export class HomePage {
   readonly categories = ['Todos', ...new Set(PRODUCTS.map((product) => product.category))];
   selectedCategory = 'Todos';
+  showPurchaseNotice = true;
 
   get products(): Product[] {
     return this.selectedCategory === 'Todos'
@@ -19,5 +20,9 @@ export class HomePage {
 
   selectCategory(category: string): void {
     this.selectedCategory = category;
+  }
+
+  dismissPurchaseNotice(): void {
+    this.showPurchaseNotice = false;
   }
 }
