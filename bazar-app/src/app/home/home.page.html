@@ -1,3 +1,35 @@
+@if (showPurchaseNotice) {
+  <div class="notice-overlay">
+    <section
+      class="purchase-notice"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="purchase-notice-title"
+      aria-describedby="purchase-notice-description"
+    >
+      <p class="eyebrow">ANTES DE COMPRAR</p>
+      <h2 id="purchase-notice-title">Como funciona</h2>
+      <div id="purchase-notice-description" class="notice-copy">
+        <p>Escolha uma peça disponível e informe seu WhatsApp com DDD para fazer o pedido pelo site.</p>
+        <p>
+          Você pode pagar o valor total ou reservar com um sinal de 30%. A reserva só é confirmada
+          depois que o pagamento for aprovado — aguarde a confirmação antes de considerar a peça reservada.
+        </p>
+        <p>Para combinar a entrega, o prazo e o frete, fale comigo pelo WhatsApp antes de concluir a compra.</p>
+        <p>
+          Ficou com alguma dúvida ou teve problema no pagamento?
+          <a href="https://wa.me/5547992626735" target="_blank" rel="noopener noreferrer">
+            Fale comigo pelo WhatsApp: (47) 99262-6735
+          </a>.
+        </p>
+      </div>
+      <button type="button" class="notice-dismiss" (click)="dismissPurchaseNotice()">
+        Eu entendi!
+      </button>
+    </section>
+  </div>
+}
+
 <ion-header class="site-header" [translucent]="false">
   <ion-toolbar>
     <div class="header-inner">

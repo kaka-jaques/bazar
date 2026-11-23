@@ -24,6 +24,25 @@ describe('HomePage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('shows the purchase notice on entry with the purchase rules and WhatsApp contact', () => {
+    const notice = fixture.nativeElement.querySelector('.purchase-notice');
+    const contactLink: HTMLAnchorElement = notice.querySelector('.notice-copy a');
+
+    expect(notice.getAttribute('role')).toBe('dialog');
+    expect(notice.getAttribute('aria-modal')).toBe('true');
+    expect(notice.textContent).toContain('sinal de 30%');
+    expect(notice.textContent).toContain('entrega, o prazo e o frete');
+    expect(contactLink.href).toBe('https://wa.me/5547992626735');
+    expect(notice.querySelector('.notice-dismiss').textContent.trim()).toBe('Eu entendi!');
+  });
+
+  it('closes the purchase notice when acknowledged', () => {
+    fixture.nativeElement.querySelector('.notice-dismiss').click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.purchase-notice')).toBeNull();
+  });
+
   it('lists every product from the editable catalog', () => {
     const cards = fixture.nativeElement.querySelectorAll('.product-card');
 
