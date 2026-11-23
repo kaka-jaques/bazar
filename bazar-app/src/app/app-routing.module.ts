@@ -3,8 +3,22 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
   {
+    path: 'pagamento/retorno',
+    loadChildren: () =>
+      import('./payment-return/payment-return.module').then(
+        (module) => module.PaymentReturnPageModule
+      ),
+  },
+  {
+    path: 'produto/:slug',
+    loadChildren: () =>
+      import('./product-detail/product-detail.module').then(
+        (module) => module.ProductDetailPageModule
+      ),
+  },
+  {
     path: 'home',
-    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
+    loadChildren: () => import('./home/home.module').then((module) => module.HomePageModule),
   },
   {
     path: '',

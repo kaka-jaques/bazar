@@ -1,0 +1,307 @@
+export interface Product {
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  summary: string;
+  description: string;
+  image: string;
+  images: string[];
+  condition: string;
+  material: string;
+  dimensions: string;
+  stock: number;
+}
+
+export const PRODUCTS: Product[] = [
+  {
+    slug: 'armario-cozinha',
+    name: 'Armário Cozinha',
+    category: 'Mobiliário',
+    price: 200,
+    summary: 'Armário de cozinha em MDF',
+    description:
+      'Armário de cozinha em MDF com acabamento em pintura UV. Possui portas e gavetas com corrediças metálicas, proporcionando praticidade e durabilidade.',
+    image: 'assets/products/poltrona-nuvem.svg',
+    images: [
+      'assets/products/poltrona-nuvem.svg',
+      'assets/products/poltrona-nuvem-detalhe.svg',
+    ],
+    condition: 'Ótimo estado',
+    material: 'MDF',
+    dimensions: '78 x 82 x 76 cm',
+    stock: 1,
+  },
+  {
+    slug: 'rack-tv',
+    name: 'Rack TV',
+    category: 'Mobiliário',
+    price: 100,
+    summary: 'Rack para TV em MDF com acabamento em pintura UV.',
+    description:
+      'Rack para TV em MDF com acabamento em pintura UV. Possui prateleiras e uma porta dobrável',
+    image: 'assets/products/vaso-aurora.svg',
+    images: ['assets/products/vaso-aurora.svg', 'assets/products/vaso-aurora-detalhe.svg'],
+    condition: 'Bom estado',
+    material: 'MDF',
+    dimensions: '24 cm de altura',
+    stock: 1,
+  },
+  {
+    slug: 'sofa',
+    name: 'Sofá',
+    category: 'Mobiliário',
+    price: 200,
+    summary: 'Sofá confortável para sala de estar.',
+    description:
+      'Sofá de 4 lugares com estofamento em tecido e estrutura em madeira. Ideal para relaxar e receber visitas.',
+    image: 'assets/products/luminaria-petala.svg',
+    images: [
+      'assets/products/luminaria-petala.svg',
+      'assets/products/luminaria-petala-detalhe.svg',
+    ],
+    condition: 'Poucas avarias',
+    material: 'Tecido e madeira',
+    dimensions: '38 cm de altura',
+    stock: 1,
+  },
+  {
+    slug: 'mesa-l',
+    name: 'Mesa L',
+    category: 'Mobiliário',
+    price: 250,
+    summary: 'Mesa em formato de L, com tampo amplo para apoiar livros, uma bebida ou sua luminária favorita.',
+    description:
+      'Mesa em formato de L, com tampo amplo para apoiar livros, uma bebida ou sua luminária favorita. Fácil de combinar com diferentes estilos.',
+    image: 'assets/products/mesa-lateral-noa.svg',
+    images: ['assets/products/mesa-lateral-noa.svg', 'assets/products/mesa-lateral-noa-detalhe.svg'],
+    condition: 'Novo',
+    material: 'MDP',
+    dimensions: '120 x 150 x 76 x 60 cm',
+    stock: 1,
+  },
+  {
+    slug: 'tv-4k-55-pol',
+    name: 'TV Philips 4K 55"',
+    category: 'Eletrodomésticos',
+    price: 1000,
+    summary: 'TV Philips 4K 55" HDR Bluetooth Android',
+    description: 'TV Philips 4K 55" HDR Bluetooth Android',
+    image: 'assets/products/tv-4k-55-pol.svg',
+    images: ['assets/products/tv-4k-55-pol.svg', 'assets/products/tv-4k-55-pol-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '55 polegadas',
+    stock: 1
+  },
+  {
+    slug: 'microondas',
+    name: 'Micro-ondas',
+    category: 'Eletrodomésticos',
+    price: 200,
+    summary: 'Micro-ondas com capacidade de 14L de 1400W',
+    description: 'Micro-ondas com capacidade de 14L de 1400W e função de descongelamento rápido, acompanha um trafo de 5000VA por ser de 110V',
+    image: 'assets/products/microondas.svg',
+    images: ['assets/products/microondas.svg', 'assets/products/microondas-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '14 litros',
+    stock: 1
+  },
+  {
+    slug: 'secadora',
+    name: 'Secadora Philco 13Kg',
+    category: 'Eletrodomésticos',
+    price: 1500,
+    summary: 'Secadora Philco 13Kg',
+    description: 'Secadora Philco 13Kg',
+    image: 'assets/products/secadora.svg',
+    images: ['assets/products/secadora.svg', 'assets/products/secadora-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '13 Kg',
+    stock: 1
+  },
+  {
+    slug: 'filtro-agua',
+    name: 'Filtro de Água',
+    category: 'Eletrodomésticos',
+    price: 100,
+    summary: 'Filtro de Água',
+    description: 'Filtro de Água',
+    image: 'assets/products/filtro-agua.svg',
+    images: ['assets/products/filtro-agua.svg', 'assets/products/filtro-agua-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'geladeira',
+    name: 'Geladeira Brastemp Frost Free 375L',
+    category: 'Eletrodomésticos',
+    price: 600,
+    summary: 'Geladeira Brastemp Frost Free 375L',
+    description: 'Geladeira Brastemp Frost Free 375L',
+    image: 'assets/products/geladeira.svg',
+    images: ['assets/products/geladeira.svg', 'assets/products/geladeira-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '375 litros',
+    stock: 1
+  },
+  {
+    slug: 'fogao',
+    name: 'Fogão 5 bocas Muller',
+    category: 'Eletrodomésticos',
+    price: 300,
+    summary: 'Fogão 5 bocas Muller',
+    description: 'Fogão 5 bocas Muller',
+    image: 'assets/products/fogao.svg',
+    images: ['assets/products/fogao.svg', 'assets/products/fogao-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '5 bocas',
+    stock: 1
+  },
+  {
+    slug: 'sanduicheira',
+    name: 'Sanduicheira',
+    category: 'Eletrodomésticos',
+    price: 30,
+    summary: 'Sanduicheira',
+    description: 'Sanduicheira',
+    image: 'assets/products/sanduicheira.svg',
+    images: ['assets/products/sanduicheira.svg', 'assets/products/sanduicheira-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '20 x 10 x 5 cm',
+    stock: 1
+  },
+  {
+    slug: 'passa-roupa-vapor',
+    name: 'Passa roupa a vapor',
+    category: 'Eletrodomésticos',
+    price: 80,
+    summary: 'Passa roupa a vapor',
+    description: 'Passa roupa a vapor',
+    image: 'assets/products/passa-roupa-vapor.svg',
+    images: ['assets/products/passa-roupa-vapor.svg', 'assets/products/passa-roupa-vapor-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'aquecedor-oleo',
+    name: 'Aquecedor a óleo',
+    category: 'Eletrodomésticos',
+    price: 150,
+    summary: 'Aquecedor a óleo',
+    description: 'Aquecedor a óleo',
+    image: 'assets/products/aquecedor-oleo.svg',
+    images: ['assets/products/aquecedor-oleo.svg', 'assets/products/aquecedor-oleo-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '10 x 40 x 50 cm',
+    stock: 1
+  },
+  {
+    slug: 'ar-condicionado-9000-btu',
+    name: 'Ar Condicionado Electrolux 9000 BTU',
+    category: 'Eletrodomésticos',
+    price: 1500,
+    summary: 'Ar Condicionado Electrolux 9000 BTU Smart Inverter Frio 220V',
+    description: 'Ar Condicionado Electrolux 9000 BTU Smart Inverter Frio 220V com integração com Alexa e Google Assistente, possui função de desumidificação, timer, modo silencioso e filtro de ar com carvão ativado.',
+    image: 'assets/products/ar-condicionado-9000-btu.svg',
+    images: ['assets/products/ar-condicionado-9000-btu.svg', 'assets/products/ar-condicionado-9000-btu-detalhe.svg'],
+    condition: 'Novo',
+    material: 'Plástico e metal',
+    dimensions: '10 x 40 x 50 cm',
+    stock: 1
+  },
+  {
+    slug: 'pratos',
+    name: 'Pratos',
+    category: 'Utensílios',
+    price: 20,
+    summary: 'Pratos de vidro e plástico',
+    description: 'Todos os pratos da casa',
+    image: 'assets/products/pratos.svg',
+    images: ['assets/products/pratos.svg', 'assets/products/pratos-detalhe.svg'],
+    condition: 'Semi-novo',
+    material: 'Plástico e vidro',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'copos-cristais',
+    name: 'Jogo de copos de cristal',
+    category: 'Utensílios',
+    price: 30,
+    summary: 'Jogo de 6 copos de cristal',
+    description: 'Jogo de 6 copos de cristal para uso doméstico',
+    image: 'assets/products/copos-cristais.svg',
+    images: ['assets/products/copos-cristais.svg', 'assets/products/copos-cristais-detalhe.svg'],
+    condition: 'Novo',
+    material: 'Cristal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'tacas-cristal',
+    name: 'Jogo de taças de cristal',
+    category: 'Utensílios',
+    price: 40,
+    summary: 'Jogo de 6 taças de cristal',
+    description: 'Jogo de 6 taças de cristal para uso doméstico',
+    image: 'assets/products/tacas-cristal.svg',
+    images: ['assets/products/tacas-cristal.svg', 'assets/products/tacas-cristal-detalhe.svg'],
+    condition: 'Novo',
+    material: 'Cristal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'rolo-pintura',
+    name: 'Rolo de pintura com reservatório',
+    category: 'Ferramentas',
+    price: 100,
+    summary: 'Rolo de pintura com reservatório de tinta',
+    description: 'Rolo de pintura com reservatório de tinta, ideal para pintar paredes e tetos com facilidade e rapidez.',
+    image: 'assets/products/rolo-pintura.svg',
+    images: ['assets/products/rolo-pintura.svg', 'assets/products/rolo-pintura-detalhe.svg'],
+    condition: 'Novo',
+    material: 'Plástico e metal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'lava-jato',
+    name: 'Lava-Jato portátil',
+    category: 'Ferramentas',
+    price: 50,
+    summary: 'Lava-Jato portátil para limpeza de veículos e superfícies externas',
+    description: 'Lava-Jato portátil para limpeza de veículos, com sistema de filtragem e pressurização.',
+    image: 'assets/products/lava-jato.svg',
+    images: ['assets/products/lava-jato.svg', 'assets/products/lava-jato-detalhe.svg'],
+    condition: 'semi-novo',
+    material: 'Plástico e metal',
+    dimensions: '',
+    stock: 1
+  },
+  {
+    slug: 'teste',
+    name: 'Teste',
+    category: 'Teste',
+    price: 1,
+    summary: 'Teste',
+    description: 'Teste',
+    image: 'assets/products/teste.svg',
+    images: ['assets/products/teste.svg', 'assets/products/teste-detalhe.svg'],
+    condition: 'teste',
+    material: 'teste',
+    dimensions: '',
+    stock: 1
+  }
+];

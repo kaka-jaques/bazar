@@ -1,8 +1,86 @@
-<ion-content [fullscreen]="true">
-  <ion-header>
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-header class="site-header" [translucent]="false">
+  <ion-toolbar>
+    <div class="header-inner">
+      <a class="wordmark" routerLink="/home" aria-label="Bazar, página inicial">bazar<span>.</span></a>
+      <nav aria-label="Navegação principal">
+        <a routerLink="/home" class="nav-link active">Vitrine</a>
+        <a href="#sobre" class="nav-link">Sobre o acervo</a>
+      </nav>
+      <a class="header-note" href="#produtos">Peças selecionadas</a>
+    </div>
+  </ion-toolbar>
+</ion-header>
 
+<ion-content class="storefront">
+  <main>
+    <section class="intro" aria-labelledby="intro-title">
+      <div class="intro-copy">
+        <p class="eyebrow">MÓVEIS · CASA · DESIGN</p>
+        <h1 id="intro-title">Peças especiais,<br />para viver de perto.</h1>
+        <p class="intro-description">
+          Um acervo de objetos com personalidade, pronto para encontrar um novo lugar na sua casa.
+        </p>
+        <a class="intro-link" href="#produtos">Explorar o acervo <span aria-hidden="true">↓</span></a>
+      </div>
+      <img class="intro-art" src="assets/products/hero-vase.svg" alt="" aria-hidden="true" />
+    </section>
+
+    <section id="produtos" class="catalog" aria-labelledby="catalog-title">
+      <div class="category-filters" role="group" aria-label="Filtrar produtos por categoria">
+        @for (category of categories; track category) {
+          <button
+            type="button"
+            class="category-filter"
+            [class.selected]="selectedCategory === category"
+            [attr.aria-pressed]="selectedCategory === category"
+            (click)="selectCategory(category)"
+          >
+            {{ category }}
+          </button>
+        }
+      </div>
+
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ESCOLHIDOS A DEDO</p>
+          <h2 id="catalog-title">O acervo</h2>
+        </div>
+        <p class="item-count">{{ products.length }} peças para descobrir</p>
+      </div>
+
+      <div class="product-grid">
+        @for (product of products; track product.slug) {
+        <a
+          class="product-card"
+          [routerLink]="['/produto', product.slug]"
+          [attr.aria-label]="'Ver detalhes de ' + product.name"
+        >
+          <div class="product-image">
+            <img [src]="product.image" [alt]="product.name" />
+            <span class="image-action" aria-hidden="true">Ver peça <span>↗</span></span>
+          </div>
+          <div class="product-info">
+            <p class="product-category">{{ product.category }}</p>
+            <div class="product-title-row">
+              <h3>{{ product.name }}</h3>
+              <p class="product-price">{{ product.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</p>
+            </div>
+            <p class="product-summary">{{ product.summary }}</p>
+          </div>
+        </a>
+        }
+      </div>
+    </section>
+
+    <section id="sobre" class="about">
+      <p class="eyebrow">MENOS, MAS MELHOR</p>
+      <p>Um acervo pequeno de peças com espaço para uma nova história.</p>
+      <a routerLink="/home">De volta ao acervo</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="wordmark" routerLink="/home" aria-label="Bazar, página inicial">bazar<span>.</span></a>
+    <p>Peças especiais, novas histórias.</p>
+  </footer>
 </ion-content>

@@ -34,4 +34,101 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
+
+:root {
+  color-scheme: light;
+  --ion-text-color: #111111;
+  --ion-text-color-rgb: 17, 17, 17;
+  --ion-background-color: #faf9f6;
+  --ion-background-color-rgb: 250, 249, 246;
+  --store-ink: #292a25;
+  --store-muted: #77766d;
+  --store-accent: #a66043;
+  --store-paper: #faf9f6;
+}
+
+ion-content.storefront,
+ion-content.detail-content {
+  --background: var(--store-paper);
+  color: var(--store-ink);
+}
+
+.site-header ion-toolbar,
+.detail-header ion-toolbar {
+  --background: var(--store-paper);
+  --border-color: transparent;
+}
+
+.header-inner,
+.site-footer {
+  width: min(1180px, calc(100% - 64px));
+  min-height: 76px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-footer {
+  border-top: 1px solid #e6e2da;
+}
+
+.wordmark {
+  color: var(--store-ink);
+  font: 700 28px/1 Georgia, serif;
+  letter-spacing: -1.5px;
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--store-accent);
+}
+
+.site-header nav {
+  display: flex;
+  gap: 34px;
+}
+
+.nav-link,
+.header-note {
+  color: var(--store-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.nav-link.active {
+  color: var(--store-ink);
+}
+
+.header-note {
+  padding: 10px 15px;
+  border: 1px solid #dcd8cf;
+  border-radius: 30px;
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--store-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .header-inner,
+  .site-footer {
+    width: calc(100% - 36px);
+    min-height: 64px;
+  }
+
+  .wordmark {
+    font-size: 24px;
+  }
+
+  .site-header nav {
+    gap: 16px;
+  }
+
+  .nav-link,
+  .header-note {
+    font-size: 11px;
+  }
+}

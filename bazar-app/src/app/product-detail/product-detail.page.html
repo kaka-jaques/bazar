@@ -1,0 +1,176 @@
+<ion-header class="detail-header" [translucent]="false">
+  <ion-toolbar>
+    <div class="header-inner">
+      <a class="wordmark" routerLink="/home" aria-label="Bazar, página inicial">bazar<span>.</span></a>
+      <a class="back-link" routerLink="/home">Voltar para a vitrine</a>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="detail-content">
+  <main class="detail-page">
+    @if (product; as item) {
+      <div class="breadcrumbs">
+        <a routerLink="/home">Vitrine</a>
+        <span aria-hidden="true">/</span>
+        <span>{{ item.category }}</span>
+      </div>
+
+      <article class="product-detail">
+        <div class="detail-gallery">
+          <div class="detail-image">
+            <img [src]="item.images[activeImageIndex]" [alt]="item.name + ' — imagem ' + (activeImageIndex + 1)" />
+            @if (item.images.length > 1) {
+              <button
+                type="button"
+                class="gallery-arrow previous"
+                aria-label="Imagem anterior"
+                [disabled]="activeImageIndex === 0"
+                (click)="showPreviousImage()"
+              >
+                <span aria-hidden="true">←</span>
+              </button>
+              <button
+                type="button"
+                class="gallery-arrow next"
+                aria-label="Próxima imagem"
+                [disabled]="activeImageIndex === item.images.length - 1"
+                (click)="showNextImage()"
+              >
+                <span aria-hidden="true">→</span>
+              </button>
+              <span class="gallery-counter" aria-live="polite">
+                {{ activeImageIndex + 1 }} / {{ item.images.length }}
+              </span>
+            }
+          </div>
+          @if (item.images.length > 1) {
+            <div class="gallery-thumbnails" role="group" aria-label="Escolher imagem do produto">
+              @for (image of item.images; track image; let index = $index) {
+                <button
+                  type="button"
+                  class="gallery-thumbnail"
+                  [class.selected]="activeImageIndex === index"
+                  [attr.aria-label]="'Mostrar imagem ' + (index + 1)"
+                  [attr.aria-pressed]="activeImageIndex === index"
+                  (click)="selectImage(index)"
+                >
+                  <img [src]="image" [alt]="item.name + ' — miniatura ' + (index + 1)" />
+                </button>
+              }
+            </div>
+          }
+        </div>
+        <div class="detail-copy">
+          <p class="eyebrow">{{ item.category }}</p>
+          <h1>{{ item.name }}</h1>
+          <p class="price">{{ item.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</p>
+          <p class="summary">{{ item.summary }}</p>
+          <div
+            class="availability"
+            [class.unavailable]="isReserved === true || reservationLoadFailed"
+            [class.checking]="isReserved === null && !reservationLoadFailed"
+          >
+            <span class="availability-dot" aria-hidden="true"></span>
+            @if (reservationLoadFailed) {
+              Não foi possível verificar a disponibilidade. Tente novamente mais tarde.
+            } @else if (isReserved === null) {
+              Verificando disponibilidade...
+            } @else {
+              {{ isReserved ? 'Item reservado' : 'Disponível no acervo' }}
+            }
+          </div>
+          <div class="checkout-actions">
+            <label class="phone-field" for="buyer-phone">
+              Seu WhatsApp com DDD
+              <input
+                id="buyer-phone"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="(47) 99999-9999"
+                [value]="buyerPhone"
+                (input)="onBuyerPhoneInput($event)"
+                [attr.aria-invalid]="buyerPhone && !normalizedBuyerPhone"
+                aria-describedby="buyer-phone-note"
+              />
+            </label>
+            <p id="buyer-phone-note" class="checkout-note">
+              O número será associado ao pedido e ficará acessível à loja para contato sobre a compra.
+              Informe um celular brasileiro com DDD para liberar o checkout.
+            </p>
+            <button
+              type="button"
+              class="checkout-button primary"
+              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null || !canMakeFullPayment || !normalizedBuyerPhone"
+              (click)="startCheckout('full')"
+            >
+              @if (checkoutInProgress === 'full') {
+                Preparando pagamento...
+              } @else {
+                Comprar por {{ item.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+              }
+            </button>
+            <button
+              type="button"
+              class="checkout-button secondary"
+              [disabled]="isReserved !== false || reservationLoadFailed || checkoutInProgress !== null || !canMakeDeposit || !normalizedBuyerPhone"
+              (click)="startCheckout('deposit')"
+            >
+              @if (checkoutInProgress === 'deposit') {
+                Preparando pagamento...
+              } @else {
+                Reservar com sinal de {{ depositAmount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} (30%)
+              }
+            </button>
+            @if (!canMakeDeposit) {
+              <p class="checkout-note" role="status">
+                O sinal de 30% fica abaixo do mínimo de R$ 1,00 aceito pela InfinitePay.
+              </p>
+            }
+            @if (checkoutErrorMessage) {
+              <p class="checkout-error" role="alert">
+                {{ checkoutErrorMessage }}
+              </p>
+            }
+          </div>
+          <div class="description">
+            <h2>Sobre a peça</h2>
+            <p>{{ item.description }}</p>
+          </div>
+          <dl class="specifications">
+            <div>
+              <dt>Estado</dt>
+              <dd>{{ item.condition }}</dd>
+            </div>
+            <div>
+              <dt>Material</dt>
+              <dd>{{ item.material }}</dd>
+            </div>
+            <div>
+              <dt>Dimensões</dt>
+              <dd>{{ item.dimensions }}</dd>
+            </div>
+            <div>
+              <dt>Unidades disponíveis</dt>
+              <dd>{{ item.stock }}</dd>
+            </div>
+          </dl>
+          <a class="back-cta" routerLink="/home">Continuar explorando</a>
+        </div>
+      </article>
+    } @else {
+      <section class="not-found">
+        <p class="eyebrow">PEÇA NÃO ENCONTRADA</p>
+        <h1>Este item não está no acervo.</h1>
+        <p>Ele pode ter encontrado uma nova casa. Explore as outras peças disponíveis.</p>
+        <a class="back-cta" routerLink="/home">Voltar para a vitrine</a>
+      </section>
+    }
+  </main>
+
+  <footer class="site-footer">
+    <a class="wordmark" routerLink="/home" aria-label="Bazar, página inicial">bazar<span>.</span></a>
+    <p>Peças especiais, novas histórias.</p>
+  </footer>
+</ion-content>

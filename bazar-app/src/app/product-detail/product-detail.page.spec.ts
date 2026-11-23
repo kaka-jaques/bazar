@@ -1,0 +1,222 @@
+import { CommonModule } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, convertToParamMap, RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular/lazy';
+import { of, Subject, throwError } from 'rxjs';
+import { PRODUCTS } from '../products/product-data';
+import { ReservationService, ReservationStatus } from '../reservations/reservation.service';
+import { PaymentService } from '../payments/payment.service';
+import { ProductDetailPage } from './product-detail.page';
+import { WHATSAPP_REDIRECT } from './whatsapp-redirect';
+
+const testProduct = PRODUCTS[0];
+
+async function createPage(
+  slug: string,
+  getStatus: () => ReturnType<ReservationService['getStatus']> = () => of({ slug, reserved: false }),
+  createCheckout: PaymentService['createCheckout'] = () =>
+    of({ orderNsu: 'order-1', checkoutUrl: 'https://checkout.infinitepay.com.br/test', amount: 1 }),
+  redirectToWhatsApp: (url: string) => void = () => undefined
+): Promise<ComponentFixture<ProductDetailPage>> {
+  await TestBed.configureTestingModule({
+    declarations: [ProductDetailPage],
+    imports: [CommonModule, IonicModule.forRoot(), RouterModule.forRoot([])],
+    providers: [
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: convertToParamMap({ slug }) } },
+      },
+      {
+        provide: ReservationService,
+        useValue: { getStatus },
+      },
+      {
+        provide: PaymentService,
+        useValue: { createCheckout },
+      },
+      {
+        provide: WHATSAPP_REDIRECT,
+        useValue: redirectToWhatsApp,
+      },
+    ],
+  }).compileComponents();
+
+  const fixture = TestBed.createComponent(ProductDetailPage);
+  fixture.detectChanges();
+  return fixture;
+}
+
+function enterBuyerPhone(fixture: ComponentFixture<ProductDetailPage>, value = '(47) 99999-9999'): void {
+  const input: HTMLInputElement = fixture.nativeElement.querySelector('#buyer-phone');
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  fixture.detectChanges();
+}
+
+describe('ProductDetailPage', () => {
+  it('shows details for a matching product slug', async () => {
+    const fixture = await createPage(testProduct.slug);
+
+    expect(fixture.nativeElement.textContent).toContain(testProduct.name);
+    expect(fixture.nativeElement.textContent).toContain(testProduct.material);
+    expect(fixture.nativeElement.querySelectorAll('.gallery-thumbnail').length).toBe(2);
+  });
+
+  it('moves through the product gallery using its controls', async () => {
+    const fixture = await createPage(testProduct.slug);
+    const nextButton: HTMLButtonElement = fixture.nativeElement.querySelector('.gallery-arrow.next');
+
+    nextButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.gallery-counter').textContent.trim()).toBe('2 / 2');
+    expect(fixture.nativeElement.querySelector('.detail-image img').getAttribute('src'))
+      .toContain(testProduct.images[1]);
+  });
+
+  it('keeps checkout buttons visible but disabled until availability is confirmed', async () => {
+    const status = new Subject<ReservationStatus>();
+    const fixture = await createPage(testProduct.slug, () => status);
+    enterBuyerPhone(fixture);
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.checkout-button');
+
+    expect(buttons.length).toBe(2);
+    expect(Array.from(buttons).every((button) => button.disabled)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.availability').textContent)
+      .toContain('Verificando disponibilidade');
+
+    status.next({ slug: testProduct.slug, reserved: false });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.isReserved).toBe(false);
+    expect(fixture.componentInstance.reservationLoadFailed).toBe(false);
+    expect(fixture.componentInstance.checkoutInProgress).toBeNull();
+    const availableButtons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.checkout-button');
+    expect(Array.from(availableButtons).map((button) => button.disabled)).toEqual([false, false]);
+    expect(fixture.nativeElement.querySelector('.availability').textContent)
+      .toContain('Disponível no acervo');
+  });
+
+  it('shows the item as reserved when the API reports it', async () => {
+    const fixture = await createPage(testProduct.slug, () =>
+      of({ slug: testProduct.slug, reserved: true })
+    );
+
+    expect(fixture.nativeElement.querySelector('.availability').textContent).toContain('Item reservado');
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.checkout-button');
+    expect(buttons.length).toBe(2);
+    expect(Array.from(buttons).every((button) => button.disabled)).toBe(true);
+  });
+
+  it('offers full payment or a 30% deposit for an available item', async () => {
+    const fixture = await createPage(testProduct.slug);
+    enterBuyerPhone(fixture);
+    const buttons = fixture.nativeElement.querySelectorAll('.checkout-button');
+    const formatAmount = (amount: number) =>
+      amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].textContent).toContain('R$');
+    expect(buttons[0].textContent).toContain(formatAmount(testProduct.price));
+    expect(buttons[1].textContent).toContain(formatAmount(fixture.componentInstance.depositAmount));
+    expect(buttons[1].textContent).toContain('30%');
+  });
+
+  it('disables the deposit and does not request checkout below InfinitePay minimum', async () => {
+    let checkoutCalls = 0;
+    const fixture = await createPage('teste', undefined, () => {
+      checkoutCalls += 1;
+      return of({ orderNsu: 'order-1', checkoutUrl: 'https://checkout.infinitepay.com.br/test', amount: 100 });
+    });
+    enterBuyerPhone(fixture);
+    const fullPaymentButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.checkout-button.primary');
+    const depositButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.checkout-button.secondary');
+
+    expect(fullPaymentButton.disabled).toBe(false);
+    expect(depositButton.disabled).toBe(true);
+    expect(depositButton.textContent).toContain('R$');
+    expect(fixture.nativeElement.textContent)
+      .toContain('O sinal de 30% fica abaixo do mínimo de R$ 1,00');
+
+    depositButton.click();
+    fixture.detectChanges();
+
+    expect(checkoutCalls).toBe(0);
+  });
+
+  it('explains when a checkout is already in progress for the product', async () => {
+    const redirects: string[] = [];
+    const fixture = await createPage(testProduct.slug, undefined, () =>
+      throwError(() => new HttpErrorResponse({ status: 409 })),
+      (url) => redirects.push(url)
+    );
+    enterBuyerPhone(fixture);
+
+    const depositButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.checkout-button.secondary');
+    depositButton.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.checkoutErrorMessage).toContain('Retome a opção escolhida');
+    expect(fixture.nativeElement.textContent).toContain('Retome a opção escolhida');
+    expect(new URL(redirects[0]).searchParams.get('text'))
+      .toContain('Quero reservar esse item');
+    expect(new URL(redirects[0]).searchParams.get('text')).toContain(testProduct.slug);
+  });
+
+  it('requires a valid Brazilian mobile number and submits it in international format', async () => {
+    const checkoutRequest = new Subject<{
+      orderNsu: string;
+      checkoutUrl: string;
+      amount: number;
+    }>();
+    const submittedPhones: string[] = [];
+    const fixture = await createPage(testProduct.slug, undefined, (_slug, _type, phone) => {
+      submittedPhones.push(phone);
+      return checkoutRequest;
+    });
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.checkout-button.primary');
+
+    expect(button.disabled).toBe(true);
+
+    enterBuyerPhone(fixture, '47 99999-9999');
+    expect(button.disabled).toBe(false);
+    button.click();
+
+    expect(submittedPhones).toEqual(['+5547999999999']);
+  });
+
+  it('shows a visible error when reservation status cannot be checked', async () => {
+    const redirects: string[] = [];
+    const fixture = await createPage(testProduct.slug, () =>
+      throwError(() => new Error('API unavailable')),
+      undefined,
+      (url) => redirects.push(url)
+    );
+
+    expect(fixture.nativeElement.querySelector('.availability').textContent)
+      .toContain('Não foi possível verificar a disponibilidade.');
+    const buttons: NodeListOf<HTMLButtonElement> =
+      fixture.nativeElement.querySelectorAll('.checkout-button');
+    expect(Array.from(buttons).every((button) => button.disabled)).toBe(true);
+    expect(new URL(redirects[0]).hostname).toBe('wa.me');
+    expect(new URL(redirects[0]).pathname).toBe('/5547992626735');
+    expect(new URL(redirects[0]).searchParams.get('text'))
+      .toContain(`ao verificar a disponibilidade do item ${testProduct.name}`);
+  });
+
+  it('provides a storefront link for an unknown product slug', async () => {
+    const fixture = await createPage('item-inexistente');
+
+    expect(fixture.nativeElement.textContent).toContain('Este item não está no acervo.');
+    expect(fixture.nativeElement.querySelector('a.back-cta').getAttribute('routerLink')).toBe('/home');
+  });
+});
